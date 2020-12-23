@@ -6,7 +6,7 @@ import requests
 import pandas as pd
 import xml.etree.ElementTree as et
 import time
-
+from PIL import Image
 
 def parse_json(json_file):
     data_dict = json.load(json_file)
@@ -34,6 +34,10 @@ def download_slides_json(base_url, video_id, video_name, headers, wait_time):
     if not os.path.exists(folder_name):
         os.mkdir(folder_name)
 
+    image_folder_name = os.path.join(folder_name, 'images')
+    if not os.path.exists(image_folder_name):
+        os.mkdir(image_folder_name)
+
     if os.path.isfile(folder_name):
         print('Error: {0} is a file, can\'t create a folder with that name'.format(folder_name))
         exit()
@@ -49,7 +53,7 @@ def download_slides_json(base_url, video_id, video_name, headers, wait_time):
 
 def get_image_file_path(folder_name, time, image_name, size):
     time_str = f'{int(time):08d}'
-    return f'{folder_name}/{time_str}-{image_name}-{size}.jpg'
+    return f'{folder_name}/images/{time_str}-{image_name}-{size}.jpg'
 
 
 def download_slides(video_id, video_name, df, base_img_url, size, headers, wait_time):
@@ -88,6 +92,15 @@ def create_ffmpeg_concat_file(video_id, video_name, df, size):
         f.write("file '{0}'\n".format(last_file_path))
 
 
+def create_pdf(df, size):
+    folder_name = '{0}-{1}'.format(video_id, video_name)
+    image_file_paths = [get_image_file_path(folder_name, row['time'], row['image.name'], size) for _, row in df.iterrows()]
+    image_handlers = list(map(Image.open, image_file_paths))
+    pdf_file_path = os.path.join(folder_name, f'{folder_name}.pdf')
+    assert len(image_handlers), 'There are no images.'
+    image_handlers[0].save(pdf_file_path, "PDF" ,resolution=100.0, save_all=True, append_images=image_handlers[1:])
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument('url')
 parser.add_argument('--size', default='big', help='medium or big')
@@ -104,3 +117,4 @@ json_file = download_slides_json(args.basedataurl, video_id, video_name, headers
 df = parse_json(json_file)
 create_ffmpeg_concat_file(video_id, video_name, df, args.size)
 download_slides(video_id, video_name, df, base_img_url, args.size, headers, args.waittime)
+create_pdf(df, args.size)
