@@ -58,7 +58,7 @@ def get_image_file_path(folder_name, time, image_name, size):
 
 def download_slides(video_id, video_name, df, base_img_url, size, headers, wait_time):
     folder_name = '{0}-{1}'.format(video_id, video_name)
-    for index, row in df.iterrows():
+    for _, row in df.iterrows():
         image_name = row['image.name']
         img_url = base_img_url.format(video_id, image_name, size)
         file_path = get_image_file_path(folder_name, row['time'], image_name, size)
